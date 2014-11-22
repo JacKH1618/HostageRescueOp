@@ -9,14 +9,17 @@ GREEN    = (   0, 255,   0)
 BLUE     = ( 0,   0,   255)
 YELLOW   = ( 255, 255, 153)
 
+GRID_HEIGHT = 21
+GRID_WIDTH = 29
+
 width  = 25
 height = 25
 margin = 1
 ##size = [708, 708]
-size = [(21*26)+1, (29*26)+1]
+size = [(GRID_HEIGHT*26)+1, (GRID_WIDTH*26)+1]
 screen = pygame.display.set_mode(size)
 
-class Grid_Cell(object):
+class GridCell(object):
     def __init__(self, x, y, blocked):
         self.blocked = blocked
         self.path = False
@@ -33,8 +36,8 @@ class Gridworld(object):
         self.grids = []
         self.agents = []
         self.agentPos = []
-        self.grid_height = 29
-        self.grid_width = 21
+        self.grid_height = GRID_HEIGHT
+        self.grid_width = GRID_WIDTH
 ##        self.filename = ''
 
     def init_grid(self):
@@ -43,14 +46,14 @@ class Gridworld(object):
                 blocked = False
                 if x%2==1 and y%2==1:
                     blocked = True
-                self.grids.append(Grid_Cell(x, y, blocked))
-##        self.enemy = self.get_grid(random.randint(1,20), random.randint(1,30))
-        self.enemy = self.get_grid(0, 0)
+                self.grids.append(GridCell(x, y, blocked))
+##        self.enemy = self.get_gridcell(random.randint(1,20), random.randint(1,30))
+        self.enemy = self.get_gridcell(0, 0)
         print('enemy at: %d,%d' % (self.enemy.x, self.enemy.y))
-##        self.swat = self.get_grid(random.randint(1,20), random.randint(1,30))
-        self.swat = self.get_grid(20, 28)
+##        self.swat = self.get_gridcell(random.randint(1,20), random.randint(1,30))
+        self.swat = self.get_gridcell(GRID_HEIGHT-1, GRID_WIDTH-1)
 
-    def get_grid(self, x, y):
+    def get_gridcell(self, x, y):
         return self.grids[x * self.grid_height + y]
 
 ##    def check_LOS():
@@ -59,17 +62,17 @@ class Gridworld(object):
         pygame.display.set_caption("Rescue Op Simulation")
         screen.fill(BLACK)
         done = False
-        for count in range(20):
-            self.enemyAt = self.get_grid(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
+        for count in range(5):
+            self.enemyAt = self.get_gridcell(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
 
-            self.swatAt = self.get_grid(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
+            self.swatAt = self.get_gridcell(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
 
             if (self.enemyAt.x == self.swatAt.x):
                 self.enemyAt.path = True
                 self.swatAt.path = True
                 diff = self.enemyAt.y - self.swatAt.y
                 while diff!=0:
-                    self.markGrid = self.get_grid(self.swatAt.x , self.swatAt.y+diff)
+                    self.markGrid = self.get_gridcell(self.swatAt.x , self.swatAt.y+diff)
                     self.markGrid.path = True
                     if diff > 0:
                         diff = diff-1
@@ -81,7 +84,7 @@ class Gridworld(object):
                 self.swatAt.path = True
                 diff = self.enemyAt.x - self.swatAt.x
                 while diff!=0:
-                    self.markGrid = self.get_grid(self.swatAt.x+diff , self.swatAt.y)
+                    self.markGrid = self.get_gridcell(self.swatAt.x+diff , self.swatAt.y)
                     self.markGrid.path = True
                     if diff > 0:
                         diff = diff-1
