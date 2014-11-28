@@ -8,18 +8,18 @@ RED      = ( 255,   0,   0)
 GREEN    = (   0, 255,   0)
 BLUE     = ( 0,   0,   255)
 YELLOW   = ( 255, 255, 153)
+ORANGE   = ( 255, 165, 0)
 
-GRID_HEIGHT = 21
-GRID_WIDTH = 29
-
-width  = 25
-height = 25
+CELL_WIDTH  = 25
+CELL_HEIGHT = 25
+MAX_HEIGHT = 29
+MAX_WIDTH = 21
 margin = 1
 ##size = [708, 708]
-size = [(GRID_HEIGHT*26)+1, (GRID_WIDTH*26)+1]
+size = [(MAX_WIDTH*(CELL_WIDTH+1))+1, (MAX_HEIGHT*(CELL_HEIGHT+1))+1]
 screen = pygame.display.set_mode(size)
 
-class GridCell(object):
+class Grid_Cell(object):
     def __init__(self, x, y, blocked):
         self.blocked = blocked
         self.path = False
@@ -27,17 +27,25 @@ class GridCell(object):
         self.y = y
 
 class Agent(object):
-    def __init__(self, agenr_id, agent_type):
+    def __init__(self, agent_id, agent_type, xOffset, yOffset):
         self.agent_id = agent_id
         self.agent_type = agent_type
+        self.xOffset = xOffset
+        self.yOffset = yOffset
     
 class Gridworld(object):
     def __init__(self):
         self.grids = []
-        self.agents = []
-        self.agentPos = []
-        self.grid_height = GRID_HEIGHT
-        self.grid_width = GRID_WIDTH
+        self.swatAgents = []
+        self.swatPos = []
+        self.swatLastVisited = []
+        self.enemyAgents = []
+        self.enemyPos = []
+        self.enemyLastVisited = []
+        self.hostagePos = []
+        self.messages = []
+        self.grid_height = MAX_HEIGHT
+        self.grid_width = MAX_WIDTH
 ##        self.filename = ''
 
     def init_grid(self):
@@ -46,51 +54,122 @@ class Gridworld(object):
                 blocked = False
                 if x%2==1 and y%2==1:
                     blocked = True
-                self.grids.append(GridCell(x, y, blocked))
-##        self.enemy = self.get_gridcell(random.randint(1,20), random.randint(1,30))
-        self.enemy = self.get_gridcell(0, 0)
-        print('enemy at: %d,%d' % (self.enemy.x, self.enemy.y))
-##        self.swat = self.get_gridcell(random.randint(1,20), random.randint(1,30))
-        self.swat = self.get_gridcell(GRID_HEIGHT-1, GRID_WIDTH-1)
+                self.grids.append(Grid_Cell(x, y, blocked))
+##        self.ENEMY_START_POS = self.get_grid(random.randint(1,20), random.randint(1,30))
+        self.ENEMY_START_POS = self.get_gridCell(0, 0)
+        print('enemy at: %d,%d' % (self.ENEMY_START_POS.x, self.ENEMY_START_POS.y))
+##        self.SWAT_START_POS = self.get_grid(random.randint(1,20), random.randint(1,30))
+        self.SWAT_START_POS = self.get_gridCell(20, 28)
 
-    def get_gridcell(self, x, y):
+        self.enemyAgents = [Agent(1,1,0*int(CELL_WIDTH/4)+1,0*int(CELL_HEIGHT/4)+1),
+                              Agent(2,1,2*int(CELL_WIDTH/4)+1,0*int(CELL_HEIGHT/4)+1),
+                              Agent(3,1,0*int(CELL_WIDTH/4)+1,2*int(CELL_HEIGHT/4)+1)]
+        self.enemyPos = [self.ENEMY_START_POS, self.ENEMY_START_POS, self.ENEMY_START_POS]
+        
+        self.swatAgents = [Agent(1,2,int(CELL_WIDTH/4),int(CELL_HEIGHT/4)),
+                              Agent(2,2,3*int(CELL_WIDTH/4),int(CELL_HEIGHT/4)),
+                              Agent(3,2,int(CELL_WIDTH/4),3*int(CELL_HEIGHT/4))]
+        self.swatPos = [self.SWAT_START_POS, self.SWAT_START_POS, self.SWAT_START_POS]
+
+        for hst_ind in range(5):
+            self.hostagePos.append(self.get_gridCell(random.randrange(1,self.grid_width-1,2), random.randrange(1,(self.grid_height-1)/2,2)))
+
+        self.swatLastVisited = [None, None, None]
+        self.enemyLastVisited = [None, None, None]
+
+    def get_gridCell(self, x, y):
         return self.grids[x * self.grid_height + y]
 
-##    def check_LOS():
+    def take_action(self, agentType, mode, x, y, ind):
+
+        if agentType == 1:
+            rescued = False
+            for hst_ind in range(len(self.hostagePos)):
+                if (x-1 >= 0 and self.hostagePos[hst_ind] == self.get_gridCell(x-1,y) or
+                    y-1 >= 0 and self.hostagePos[hst_ind] == self.get_gridCell(x,y-1) or
+                    x+1 <= self.grid_width-1 and self.hostagePos[hst_ind] == self.get_gridCell(x+1,y) or
+                    y+1 <= self.grid_height-1 and self.hostagePos[hst_ind] == self.get_gridCell(x,y+1)):
+##                    self.hostagePos[hst_ind] = self.SWAT_START_POS
+                    self.hostagePos.remove(self.hostagePos[hst_ind])
+                    rescued = True
+                    if rescued :
+                        return self.get_gridCell(x,y)
+
+        if mode == 1:
+            choice = random.randint(1,100)
+            if choice <= 25:
+                if (x-1 < 0):
+                    cell = self.get_gridCell(x,y)
+                else:
+                    cell = self.get_gridCell(x-1,y)
+            elif choice <= 50:
+                if (y-1 < 0):
+                    cell = self.get_gridCell(x,y)
+                else:
+                    cell = self.get_gridCell(x,y-1)
+            elif choice <= 75:
+                if (x+1 > self.grid_width-1):
+                    cell = self.get_gridCell(x,y)
+                else:
+                    cell = self.get_gridCell(x+1,y)
+            else:
+                if (y+1 > self.grid_height-1):
+                    cell = self.get_gridCell(x,y)
+                else:
+                    cell = self.get_gridCell(x,y+1)
+
+            if cell.blocked == True or cell == self.get_gridCell(x,y):
+                cell =  self.take_action(agentType, 1, x, y, ind)
+                
+            if agentType == 1:
+                if(self.swatLastVisited[ind] == cell):
+                    cell = self.take_action(agentType, 1, x, y, ind)
+                self.swatLastVisited[ind] = self.get_gridCell(x,y)
+            else:
+                if(self.enemyLastVisited[ind] == cell):
+                    cell = self.take_action(agentType, 1, x, y, ind)
+                self.enemyLastVisited[ind] = self.get_gridCell(x,y)
+                
+            return cell
+
+    def update_agentPos(self):
+        for swat_ind in range(len(self.swatPos)):
+            self.swatPos[swat_ind] = self.take_action(1, 1, self.swatPos[swat_ind].x, self.swatPos[swat_ind].y, swat_ind)
+
+        for enemy_ind in range(len(self.enemyPos)):
+            self.enemyPos[enemy_ind] = self.take_action(2, 1, self.enemyPos[enemy_ind].x, self.enemyPos[enemy_ind].y, enemy_ind)
+
+    def check_LOS(self):
+        for swat in self.swatPos:
+            for enemy in self.enemyPos:
+                if(swat.x == enemy.x and swat.x%2 == 0):
+                    self.get_gridCell(swat.x, swat.y).path = True
+                    self.get_gridCell(enemy.x, enemy.y).path = True
+                    diff = enemy.y - swat.y
+                    while diff!=0:
+                        self.get_gridCell(swat.x, swat.y+diff).path = True
+                        if diff > 0:
+                            diff = diff-1
+                        else:
+                            diff = diff+1
+
+                if(swat.y == enemy.y and swat.y%2 == 0):
+                    self.get_gridCell(swat.x, swat.y).path = True
+                    self.get_gridCell(enemy.x, enemy.y).path = True
+                    diff = enemy.x - swat.x
+                    while diff!=0:
+                        self.get_gridCell(swat.x+diff, swat.y).path = True
+                        if diff > 0:
+                            diff = diff-1
+                        else:
+                            diff = diff+1
             
     def display_grid(self):
         pygame.display.set_caption("Rescue Op Simulation")
         screen.fill(BLACK)
         done = False
-        for count in range(5):
-            self.enemyAt = self.get_gridcell(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
-
-            self.swatAt = self.get_gridcell(random.randrange(0,self.grid_width-1,2), random.randrange(0,self.grid_height-1,2))        
-
-            if (self.enemyAt.x == self.swatAt.x):
-                self.enemyAt.path = True
-                self.swatAt.path = True
-                diff = self.enemyAt.y - self.swatAt.y
-                while diff!=0:
-                    self.markGrid = self.get_gridcell(self.swatAt.x , self.swatAt.y+diff)
-                    self.markGrid.path = True
-                    if diff > 0:
-                        diff = diff-1
-                    else:
-                        diff = diff+1
-
-            if (self.enemyAt.y == self.swatAt.y):
-                self.enemyAt.path = True
-                self.swatAt.path = True
-                diff = self.enemyAt.x - self.swatAt.x
-                while diff!=0:
-                    self.markGrid = self.get_gridcell(self.swatAt.x+diff , self.swatAt.y)
-                    self.markGrid.path = True
-                    if diff > 0:
-                        diff = diff-1
-                    else:
-                        diff = diff+1
-            
+        for count in range(100):
+####            Display GridWorld
             for grid in self.grids:
                 color = BLACK
                 if grid.blocked == False:
@@ -101,28 +180,40 @@ class Gridworld(object):
                     grid.path = False
                     
                 #--
-                if grid == self.enemy:
+                if grid == self.ENEMY_START_POS:
                     color = YELLOW
-                if grid == self.swat:
+                if grid == self.SWAT_START_POS:
                     color = YELLOW
                 #--
                 pygame.draw.rect(screen, color,
-                     [(margin+width)*grid.x+margin, (margin+height)*grid.y+margin,
-                      width, height])
-    ##            pygame.draw.circle(screen, RED,
-    ##                [(margin+width)*(self.enemy.x+margin), (margin+height)*(self.enemy.y+margin)],5, 0)
-    ##            pygame.display.flip()
-            pygame.draw.circle(screen, RED,
-                [(self.enemyAt.x * width)+(self.enemyAt.x * margin)+int(width/4)+1,(self.enemyAt.y * height)+ (self.enemyAt.y * margin)+int(height/4)+1],4, 0)
+                     [(margin+CELL_WIDTH)*grid.x+margin, (margin+CELL_HEIGHT)*grid.y+margin,
+                      CELL_WIDTH, CELL_HEIGHT])
+            
+##-- Display Enemy Agents
+            for enemy_ind in range(len(self.enemyPos)):
+                pygame.draw.rect(screen, RED,
+                         [(margin+CELL_WIDTH)*self.enemyPos[enemy_ind].x+margin+self.enemyAgents[enemy_ind].xOffset, (margin+CELL_HEIGHT)*self.enemyPos[enemy_ind].y+margin+self.enemyAgents[enemy_ind].yOffset,
+                          10, 10])
 
-            pygame.draw.circle(screen, RED,
-                [(self.swatAt.x * width)+(self.swatAt.x * margin)+int(3*width/4)+1,(self.swatAt.y * height)+ (self.swatAt.y * margin)+int(height/4)+1],4, 0)
+##-- Display Swat Agents
+            for swat_ind in range(len(self.swatPos)):
+                pygame.draw.circle(screen, BLUE,
+                    [(self.swatPos[swat_ind].x * CELL_WIDTH)+(self.swatPos[swat_ind].x * margin)+self.swatAgents[swat_ind].xOffset+1,(self.swatPos[swat_ind].y * CELL_HEIGHT)+ (self.swatPos[swat_ind].y * margin)+self.swatAgents[swat_ind].yOffset+1],4, 0)
+
+##-- Display Hostages
+            for hst_ind in range(len(self.hostagePos)):
+                pygame.draw.circle(screen, ORANGE,
+                    [(self.hostagePos[hst_ind].x * CELL_WIDTH)+(self.hostagePos[hst_ind].x * margin)+int(CELL_WIDTH/2)+1,(self.hostagePos[hst_ind].y * CELL_HEIGHT)+ (self.hostagePos[hst_ind].y * margin)+int(CELL_HEIGHT/2)+1],4,0)
             
             pygame.display.flip()
-            time.sleep(2)
+            time.sleep(1)
+
+            self.update_agentPos()
+            self.check_LOS()
 
 def main():
     pygame.init()
+##    maze_number = input("Start Y/N: ")
     a = Gridworld()
     a.init_grid()
     a.display_grid()
