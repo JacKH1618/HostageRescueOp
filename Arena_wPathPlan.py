@@ -1,6 +1,7 @@
 import heapq, time
 import random
 import pygame
+##import easygui
 
 BLACK    = (   0,   0,   0)
 WHITE    = ( 255, 255, 255)
@@ -46,6 +47,9 @@ class Gridworld(object):
         self.messages = []
         self.grid_height = MAX_HEIGHT
         self.grid_width = MAX_WIDTH
+        ##Lists of duelling agent objects. duellingSwatList[i] duels with duellingEnemyList[i]
+        self.duellingSwatList = []
+        self.duellingEnemyList = []
 ##        self.filename = ''
 
     def init_grid(self):
@@ -140,8 +144,8 @@ class Gridworld(object):
             self.enemyPos[enemy_ind] = self.take_action(2, 1, self.enemyPos[enemy_ind].x, self.enemyPos[enemy_ind].y, enemy_ind)
 
     def check_LOS(self):
-        for swat in self.swatPos:
-            for enemy in self.enemyPos:
+        for swatindex, swat in enumerate(self.swatPos):
+            for enemyindex, enemy in enumerate(self.enemyPos):
                 if(swat.x == enemy.x and swat.x%2 == 0):
                     self.get_gridCell(swat.x, swat.y).path = True
                     self.get_gridCell(enemy.x, enemy.y).path = True
@@ -152,6 +156,10 @@ class Gridworld(object):
                             diff = diff-1
                         else:
                             diff = diff+1
+                    ##Adding the opposing agents in LOS to duelling lists
+                    self.duellingSwatList.append(self.swatAgents[swatindex])
+                    self.duellingEnemyList.append(self.enemyAgents[enemyindex])
+                    
 
                 if(swat.y == enemy.y and swat.y%2 == 0):
                     self.get_gridCell(swat.x, swat.y).path = True
@@ -163,6 +171,11 @@ class Gridworld(object):
                             diff = diff-1
                         else:
                             diff = diff+1
+
+    def duel(self):
+        temp = 1
+        ##easygui.msgbox("Time for some shootin'!", title="Duel")
+        
             
     def display_grid(self):
         pygame.display.set_caption("Rescue Op Simulation")
@@ -206,10 +219,11 @@ class Gridworld(object):
                     [(self.hostagePos[hst_ind].x * CELL_WIDTH)+(self.hostagePos[hst_ind].x * margin)+int(CELL_WIDTH/2)+1,(self.hostagePos[hst_ind].y * CELL_HEIGHT)+ (self.hostagePos[hst_ind].y * margin)+int(CELL_HEIGHT/2)+1],4,0)
             
             pygame.display.flip()
-            time.sleep(1)
+            time.sleep(0.5)
 
             self.update_agentPos()
             self.check_LOS()
+            self.duel()
 
 def main():
     pygame.init()
