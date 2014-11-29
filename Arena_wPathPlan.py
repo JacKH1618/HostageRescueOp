@@ -11,9 +11,17 @@ BLUE     = ( 0,   0,   255)
 YELLOW   = ( 255, 255, 153)
 ORANGE   = ( 255, 165, 0)
 
+#Agent Strength Levels
+MIN_STRENGTH = 0
+MAX_STRENGTH = 100
+MAX_STRENGH_DIFF = (MAX_STRENGTH - MIN_STRENGTH)
+
+TRUE = 1
+FALSE = 0
+
 CELL_WIDTH  = 25
 CELL_HEIGHT = 25
-MAX_HEIGHT = 29
+MAX_HEIGHT = 21
 MAX_WIDTH = 21
 margin = 1
 ##size = [708, 708]
@@ -33,6 +41,14 @@ class Agent(object):
         self.agent_type = agent_type
         self.xOffset = xOffset
         self.yOffset = yOffset
+        # Defining strength levels
+        if 1 == agent_id:
+            self.strength = 10
+        elif 2 == agent_id:
+            self.strength = 50
+        elif 3 == agent_id:
+            self.strength = 100
+        self.killed = FALSE
     
 class Gridworld(object):
     def __init__(self):
@@ -50,6 +66,7 @@ class Gridworld(object):
         ##Lists of duelling agent objects. duellingSwatList[i] duels with duellingEnemyList[i]
         self.duellingSwatList = []
         self.duellingEnemyList = []
+        self.killed = FALSE
 ##        self.filename = ''
 
     def init_grid(self):
@@ -60,10 +77,11 @@ class Gridworld(object):
                     blocked = True
                 self.grids.append(Grid_Cell(x, y, blocked))
 ##        self.ENEMY_START_POS = self.get_grid(random.randint(1,20), random.randint(1,30))
+        # print('self.grids length: %d' % len(self.grids))
         self.ENEMY_START_POS = self.get_gridCell(0, 0)
-        print('enemy at: %d,%d' % (self.ENEMY_START_POS.x, self.ENEMY_START_POS.y))
+        #print('enemy at: %d,%d' % (self.ENEMY_START_POS.x, self.ENEMY_START_POS.y))
 ##        self.SWAT_START_POS = self.get_grid(random.randint(1,20), random.randint(1,30))
-        self.SWAT_START_POS = self.get_gridCell(20, 28)
+        self.SWAT_START_POS = self.get_gridCell(MAX_WIDTH-1, MAX_HEIGHT-1)
 
         self.enemyAgents = [Agent(1,1,0*int(CELL_WIDTH/4)+1,0*int(CELL_HEIGHT/4)+1),
                               Agent(2,1,2*int(CELL_WIDTH/4)+1,0*int(CELL_HEIGHT/4)+1),
@@ -146,35 +164,58 @@ class Gridworld(object):
     def check_LOS(self):
         for swatindex, swat in enumerate(self.swatPos):
             for enemyindex, enemy in enumerate(self.enemyPos):
-                if(swat.x == enemy.x and swat.x%2 == 0):
-                    self.get_gridCell(swat.x, swat.y).path = True
-                    self.get_gridCell(enemy.x, enemy.y).path = True
-                    diff = enemy.y - swat.y
-                    while diff!=0:
-                        self.get_gridCell(swat.x, swat.y+diff).path = True
-                        if diff > 0:
-                            diff = diff-1
-                        else:
-                            diff = diff+1
-                    ##Adding the opposing agents in LOS to duelling lists
-                    self.duellingSwatList.append(self.swatAgents[swatindex])
-                    self.duellingEnemyList.append(self.enemyAgents[enemyindex])
-                    
+                if (FALSE == self.swatAgents[swatindex].killed) and (FALSE == self.enemyAgents[enemyindex].killed):
+                    if(swat.x == enemy.x and swat.x%2 == 0):
+                        self.get_gridCell(swat.x, swat.y).path = True
+                        self.get_gridCell(enemy.x, enemy.y).path = True
+                        diff = enemy.y - swat.y
+                        while diff!=0:
+                            self.get_gridCell(swat.x, swat.y+diff).path = True
+                            if diff > 0:
+                                diff = diff-1
+                            else:
+                                diff = diff+1
+                        ##Adding the opposing agents in LOS to duelling lists
+                        self.duellingSwatList.append(self.swatAgents[swatindex])
+                        self.duellingEnemyList.append(self.enemyAgents[enemyindex])
+                        
 
-                if(swat.y == enemy.y and swat.y%2 == 0):
-                    self.get_gridCell(swat.x, swat.y).path = True
-                    self.get_gridCell(enemy.x, enemy.y).path = True
-                    diff = enemy.x - swat.x
-                    while diff!=0:
-                        self.get_gridCell(swat.x+diff, swat.y).path = True
-                        if diff > 0:
-                            diff = diff-1
-                        else:
-                            diff = diff+1
+                    if(swat.y == enemy.y and swat.y%2 == 0):
+                        self.get_gridCell(swat.x, swat.y).path = True
+                        self.get_gridCell(enemy.x, enemy.y).path = True
+                        diff = enemy.x - swat.x
+                        while diff!=0:
+                            self.get_gridCell(swat.x+diff, swat.y).path = True
+                            if diff > 0:
+                                diff = diff-1
+                            else:
+                                diff = diff+1
 
     def duel(self):
-        temp = 1
-        ##easygui.msgbox("Time for some shootin'!", title="Duel")
+        ##temp = 1
+        ##easygui.msgbox("Time for some shootin'!", title="Duel!")
+        for duelindex in range(len(self.duellingSwatList)):
+            ## Lengths of duellingSwatList and duellingEnemyList should be equal
+
+            ## Calculate probability of swat killing enemy (or vice versa)
+            #prob_swatKillsEnemy = self.duellingSwatList[duelindex].strength/MAX_STRENGTH
+            #prob_enemyKillsSwat = self.duellingEnemyList[duelindex].strength/MAX_STRENGTH
+
+            ## Kill none, one or both depending on probablity based on agent's strength level
+            rand_num = random.randint(1,100)
+            if rand_num <= self.duellingSwatList[duelindex].strength:
+                ## Add code for deleting enemy agent object pointed to by duellingEnemyList[duelindex]
+                self.duellingEnemyList[duelindex].killed = TRUE
+                
+            if rand_num <= self.duellingEnemyList[duelindex].strength:
+                ## Add code for deleting swat agent object pointed to by duellingSwatList[duelindex]
+                self.duellingSwatList[duelindex].killed = TRUE
+
+        ## Cleanup deulling lists for next use
+        for duelindex in range(len(self.duellingSwatList)):
+            del(self.duellingSwatList[duelindex])
+            del(self.duellingEnemyList[duelindex])
+            
         
             
     def display_grid(self):
@@ -204,13 +245,15 @@ class Gridworld(object):
             
 ##-- Display Enemy Agents
             for enemy_ind in range(len(self.enemyPos)):
-                pygame.draw.rect(screen, RED,
+                if FALSE == self.enemyAgents[enemy_ind].killed:
+                    pygame.draw.rect(screen, RED,
                          [(margin+CELL_WIDTH)*self.enemyPos[enemy_ind].x+margin+self.enemyAgents[enemy_ind].xOffset, (margin+CELL_HEIGHT)*self.enemyPos[enemy_ind].y+margin+self.enemyAgents[enemy_ind].yOffset,
                           10, 10])
 
 ##-- Display Swat Agents
             for swat_ind in range(len(self.swatPos)):
-                pygame.draw.circle(screen, BLUE,
+                if FALSE == self.swatAgents[swat_ind].killed:
+                    pygame.draw.circle(screen, BLUE,
                     [(self.swatPos[swat_ind].x * CELL_WIDTH)+(self.swatPos[swat_ind].x * margin)+self.swatAgents[swat_ind].xOffset+1,(self.swatPos[swat_ind].y * CELL_HEIGHT)+ (self.swatPos[swat_ind].y * margin)+self.swatAgents[swat_ind].yOffset+1],4, 0)
 
 ##-- Display Hostages
